@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>제주 해녀 - 바다 보호 프로젝트</title>
     <style>
-        /* 커스텀 TTF 폰트 설정 */
+        /* 커스텀 TTF 폰트 설정 (Silver.ttf) */
         @font-face {
             font-family: 'PixelFont';
             src: url('assets/Silver.ttf') format('truetype');
@@ -33,13 +33,14 @@
             overflow: hidden;
         }
 
+        /* 💡 맑고 편안한 바다 배경색 (#226eaa = rgb(34,110,170)) */
         #game-container {
             position: relative;
             width: 100vw;
             height: 100vh;
             max-width: 500px;
             margin: 0 auto;
-            background: #001f3f;
+            background: #226eaa;
             overflow: hidden;
         }
 
@@ -57,7 +58,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.88);
+            background: rgba(10, 30, 50, 0.9);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -81,13 +82,14 @@
             z-index: 10;
         }
 
+        /* 💡 수정된 폰트 크기(20px) 유지 및 청록 민트 포인트 반영 */
         .icon-btn {
             padding: 8px 16px;
             font-size: 20px;
             margin: 0;
             border: 2px solid #fff;
-            background: #00d2ff;
-            color: #111;
+            background: #64ffda;
+            color: #0b2545;
             font-weight: bold;
             cursor: pointer;
         }
@@ -105,7 +107,7 @@
         #joystick-base {
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
             border: 2px solid rgba(255, 255, 255, 0.8);
             position: relative;
         }
@@ -113,15 +115,15 @@
         #joystick-stick {
             width: 40px;
             height: 40px;
-            background: rgba(0, 210, 255, 0.8);
+            background: rgba(100, 255, 218, 0.8);
             position: absolute;
             top: 30px;
             left: 30px;
         }
 
-        /* 💡 1단계 줌업 미니게임 UI */
+        /* 💡 1단계 줌업 미니게임 UI (그라데이션 제거, 약간 깊은 바다 파랑 #1d5b8c) */
         #stage1-screen {
-            background: radial-gradient(circle, #004e92 0%, #000428 100%);
+            background: #1d5b8c;
         }
 
         #zoomCanvas {
@@ -132,7 +134,7 @@
             left: 0;
         }
 
-        /* 💡 수거 주머니 이미지 영역 */
+        /* 수거 주머니 이미지 영역 */
         .bag-zone {
             position: absolute;
             bottom: 15px;
@@ -154,33 +156,32 @@
             image-rendering: pixelated;
         }
 
-        /* 💡 2단계 진입 내레이션 & 버튼 UI (위치 아래쪽 이동 및 Z-Index 보정) */
+        /* 💡 2단계 진입 내레이션 & 버튼 UI (폰트 크기 및 색상 조합 수정) */
         #narration-box {
             position: absolute;
             bottom: 25px;
-            /* 아래쪽으로 위치 변경 */
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 20, 40, 0.95);
-            border: 3px solid #00d2ff;
+            background: rgba(11, 37, 69, 0.95);
+            border: 3px solid #64ffda;
             padding: 20px 25px;
             width: 90%;
             max-width: 360px;
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.3);
             z-index: 30;
-            /* 생물 및 수거 주머니보다 항상 위에 표시 */
         }
 
+        /* 💡 수정하신 폰트 크기(20px) 유지 */
         .narration-text {
             font-size: 20px;
             line-height: 1.5;
-            color: #ffda79;
+            color: #ffeaa7;
             margin-bottom: 20px;
             word-break: keep-all;
         }
 
         .action-btn {
-            background: #0088cc;
+            background: #008b8b;
             border: 2px solid #fff;
             padding: 12px 20px;
             color: #fff;
@@ -196,6 +197,7 @@
             transform: scale(0.96);
         }
 
+        /* 💡 수정하신 폰트 크기(16px / 18px) 유지 */
         .sub-txt {
             font-size: 16px;
             opacity: 0.9;
@@ -250,7 +252,7 @@
 
         <!-- UI: 도감 화면 -->
         <div id="book-ui" class="overlay hidden">
-            <h2>제주 바다 생물 도감</h2>
+            <h2 style="color:#64ffda;">제주 바다 생물 도감</h2>
             <div id="book-grid"
                 style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; width:100%;"></div>
             <button class="icon-btn" style="margin-top:20px; padding:12px 24px;" onclick="closeBook()">바다로 돌아가기</button>
@@ -375,7 +377,6 @@
 
             document.getElementById('stage1-screen').classList.remove('hidden');
             document.getElementById('narration-box').classList.add('hidden');
-            // 💡 1단계 진입 시 수거 주머니 보이기
             document.getElementById('bag-zone').classList.remove('hidden');
 
             trashList = [];
@@ -519,7 +520,6 @@
             narrationText.innerHTML = `쓰레기를 모두 치웠어!<br><br>하지만 <strong>${targetCreature.name}</strong>이(가) 뜨거운 해수온 때문에 더워하고 있어!`;
             btnSubTxt.innerText = `${targetCreature.name}을(를) 위해`;
 
-            // 💡 쓰레기를 다 치우면 수거 주머니는 숨기고 내레이션 창만 표시
             document.getElementById('bag-zone').classList.add('hidden');
             narrationBox.classList.remove('hidden');
         }
@@ -590,8 +590,8 @@
             ctx.save();
             ctx.translate(-cameraX, -cameraY);
 
-            // 격자 그리기
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+            // 격자 그리기 (바다 배경에 어울리는 부드러운 하얀 가이드 선)
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
             ctx.lineWidth = 2;
             for (let x = 0; x < MAP_WIDTH; x += 100) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, MAP_HEIGHT); ctx.stroke();
@@ -600,8 +600,8 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(MAP_WIDTH, y); ctx.stroke();
             }
 
-            // 맵 테두리
-            ctx.strokeStyle = "#00d2ff";
+            // 맵 테두리 (민트 테두리)
+            ctx.strokeStyle = "#64ffda";
             ctx.lineWidth = 6;
             ctx.strokeRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
@@ -623,7 +623,7 @@
                     }
 
                     ctx.fillStyle = "#fff";
-                    ctx.font = "14px 'PixelFont', sans-serif";
+                    ctx.font = "18px 'PixelFont', sans-serif";
                     ctx.textAlign = "center";
                     ctx.fillText(c.name, c.x, drawY + 45);
                 } else {
@@ -676,7 +676,7 @@
             grid.innerHTML = '';
             creatures.forEach(c => {
                 const div = document.createElement('div');
-                div.style.cssText = "padding:10px; border:2px solid #00d2ff; text-align:center; background:#111;";
+                div.style.cssText = "padding:10px; border:2px solid #64ffda; text-align:center; background:#112233;";
 
                 const activeImg = c.saved ? c.imgs.happy : c.imgs.gray;
 
@@ -684,7 +684,7 @@
                     <div style="height:60px; display:flex; justify-content:center; align-items:center;">
                         <img src="${activeImg.src}" style="max-width:60px; max-height:60px; object-fit:contain; image-rendering:pixelated;">
                     </div>
-                    <div style="font-size:12px; margin-top:5px; color:${c.saved ? '#00d2ff' : '#888'};">
+                    <div style="font-size:16px; margin-top:5px; color:${c.saved ? '#64ffda' : '#88a0b0'};">
                         ${c.saved ? c.name : '미구출'}
                     </div>
                 `;
