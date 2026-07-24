@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>제주 해녀 - 바다 보호 프로젝트</title>
+    <style>
+        /* 💡 커스텀 TTF 폰트 설정 (assets/myfont.ttf 파일 경로) */
+        @font-face {
+            font-family: 'PixelFont';
+            src: url('assets/Silver.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -webkit-user-drag: none;
+            /* 💡 픽셀 아트 스타일을 위해 곡면 제거 */
+            border-radius: 0 !important;
+            font-family: 'PixelFont', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 500px;
+            margin: 0 auto;
+            background: #001f3f;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            /* 💡 캔버스 픽셀 렌더링 스타일 연출 */
+            image-rendering: pixelated;
+        }
+
+        /* UI 레이어 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.88);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 20;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .top-bar {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .icon-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            margin: 0;
+            border: 2px solid #fff;
+            background: #00d2ff;
+            color: #111;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* 가상 조이스틱 */
+        #joystick-zone {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 100px;
+            height: 100px;
+            z-index: 10;
+        }
+
+        #joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            position: relative;
+        }
+
+        #joystick-stick {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 210, 255, 0.8);
+            position: absolute;
+            top: 30px;
+            left: 30px;
+        }
+
+        /* 💡 1단계 줌업 미니게임 UI */
+        #stage1-screen {
+            background: radial-gradient(circle, #004e92 0%, #000428 100%);
+        }
+
+        #zoomCanvas {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* 💡 수거 주머니 이미지 영역 */
+        .bag-zone {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 110px;
+            height: 110px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .bag-zone img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+
+        /* 💡 2단계 진입 내레이션 & 버튼 UI */
+        #narration-box {
+            background: rgba(0, 20, 40, 0.95);
+            border: 3px solid #00d2ff;
+            padding: 25px;
+            width: 90%;
+            max-width: 340px;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+        }
+
+        .narration-text {
+            font-size: 18px;
+            line-height: 1.5;
+            color: #ffda79;
+            margin-bottom: 25px;
+            word-break: keep-all;
+        }
+
+        .action-btn {
+            background: #0088cc;
+            border: 2px solid #fff;
+            padding: 12px 20px;
+            color: #fff;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.1s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.96);
+        }
+
+        .sub-txt {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 3px;
+            font-weight: normal;
+            color: #e0f7fc;
+        }
+
+        .main-txt {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <div class="top-bar">
+            <button class="icon-btn" onclick="openBook()">도감</button>
+        </div>
+
+        <!-- 본게임 메인 탐색 캔버스 -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- 가상 조이스틱 -->
+        <div id="joystick-zone">
+            <div id="joystick-base">
+                <div id="joystick-stick"></div>
+            </div>
+        </div>
+
+        <!-- 💡 UI 1: 줌업 쓰레기 수거 1단계 미니게임 레이어 -->
+        <div id="stage1-screen" class="overlay hidden">
+            <canvas id="zoomCanvas"></canvas>
+
+            <!-- 💡 수거 주머니 이미지 적용 영역 -->
+            <div class="bag-zone">
+                <img src="assets/bag_icon.png" alt="수거주머니" onerror="this.style.display='none'">
+            </div>
+
+            <!-- UI 2: 쓰레기 다 수거 후 나타나는 스토리 내레이션 & 2단계 버튼 -->
+            <div id="narration-box" class="hidden">
+                <div id="narration-text" class="narration-text"></div>
+                <button id="btn-goto-stage2" class="action-btn">
+                    <span id="btn-sub-txt" class="sub-txt"></span>
+                    <span class="main-txt">해수온 낮추기</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- UI: 도감 화면 -->
+        <div id="book-ui" class="overlay hidden">
+            <h2>제주 바다 생물 도감</h2>
+            <div id="book-grid"
+                style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; width:100%;"></div>
+            <button class="icon-btn" style="margin-top:20px; padding:12px 24px;" onclick="closeBook()">바다로 돌아가기</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 기본 설정 및 데이터
+        // ==========================================
+        const container = document.getElementById('game-container');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        ctx.imageSmoothingEnabled = false;
+
+        const MAP_WIDTH = 1600;
+        const MAP_HEIGHT = 1600;
+
+        // 4종 생물 데이터 및 이미지 로드
+        const creatures = [
+            { id: 1, key: "coral", name: "연산호", x: 300, y: 300, saved: false },
+            { id: 2, key: "dolphin", name: "남방큰돌고래", x: 500, y: 1200, saved: false },
+            { id: 3, key: "turtle", name: "푸른바다거북", x: 1200, y: 1300, saved: false },
+            { id: 4, key: "shell", name: "뿔소라", x: 1300, y: 400, saved: false }
+        ];
+
+        creatures.forEach(c => {
+            c.imgs = {
+                gray: new Image(),
+                hot: new Image(),
+                happy: new Image()
+            };
+            c.imgs.gray.src = `assets/${c.key}_gray.png`;
+            c.imgs.hot.src = `assets/${c.key}_hot.png`;
+            c.imgs.happy.src = `assets/${c.key}_happy.png`;
+        });
+
+        const player = { x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2, size: 22, speed: 4 };
+
+        const playerImgs = {
+            left: [new Image(), new Image()],
+            right: [new Image(), new Image()]
+        };
+
+        playerImgs.left[0].src = 'assets/haenyeo_left_1.png';
+        playerImgs.left[1].src = 'assets/haenyeo_left_2.png';
+        playerImgs.right[0].src = 'assets/haenyeo_right_1.png';
+        playerImgs.right[1].src = 'assets/haenyeo_right_2.png';
+
+        const imgTrashBag = new Image();
+        imgTrashBag.src = 'assets/trash_bag.png';
+
+        const trashImgs = [new Image(), new Image(), new Image()];
+        trashImgs[0].src = 'assets/trash1.png';
+        trashImgs[1].src = 'assets/trash2.png';
+        trashImgs[2].src = 'assets/trash3.png';
+
+        let animFrame = 0;
+        let animTimer = 0;
+        let facingDir = 'right';
+        let moveAngle = 0;
+
+        let targetCreature = null;
+
+        // ==========================================
+        // 2. 조이스틱 조작 로직
+        // ==========================================
+        const joystickZone = document.getElementById('joystick-zone');
+        const stick = document.getElementById('joystick-stick');
+        let joyInput = { x: 0, y: 0 };
+        let isDragging = false;
+
+        function handleJoyStart(e) { isDragging = true; handleJoyMove(e); }
+        function handleJoyEnd() {
+            isDragging = false;
+            joyInput = { x: 0, y: 0 };
+            stick.style.transform = `translate(0px, 0px)`;
+        }
+        function handleJoyMove(e) {
+            if (!isDragging) return;
+            const rect = joystickZone.getBoundingClientRect();
+            const touch = e.touches ? e.touches[0] : e;
+            let dx = touch.clientX - (rect.left + 50);
+            let dy = touch.clientY - (rect.top + 50);
+            let distance = Math.hypot(dx, dy);
+            const maxRadius = 35;
+
+            if (distance > maxRadius) {
+                dx = (dx / distance) * maxRadius;
+                dy = (dy / distance) * maxRadius;
+            }
+            stick.style.transform = `translate(${dx}px, ${dy}px)`;
+            joyInput.x = dx / maxRadius;
+            joyInput.y = dy / maxRadius;
+        }
+
+        joystickZone.addEventListener('touchstart', handleJoyStart);
+        window.addEventListener('touchmove', handleJoyMove);
+        window.addEventListener('touchend', handleJoyEnd);
+        joystickZone.addEventListener('mousedown', handleJoyStart);
+        window.addEventListener('mousemove', handleJoyMove);
+        window.addEventListener('mouseup', handleJoyEnd);
+
+        // ==========================================
+        // 3. 1단계 줌업 쓰레기 수거 미니게임 Engine
+        // ==========================================
+        const zoomCanvas = document.getElementById('zoomCanvas');
+        const zCtx = zoomCanvas.getContext('2d');
+        let trashList = [];
+        let draggedTrash = null;
+        let dragOffset = { x: 0, y: 0 };
+        let zoomAnimationId = null;
+
+        function initStage1(creature) {
+            targetCreature = creature;
+
+            zoomCanvas.width = container.clientWidth || window.innerWidth;
+            zoomCanvas.height = container.clientHeight || window.innerHeight;
+            zCtx.imageSmoothingEnabled = false;
+
+            document.getElementById('stage1-screen').classList.remove('hidden');
+            document.getElementById('narration-box').classList.add('hidden');
+
+            trashList = [];
+            const centerX = zoomCanvas.width / 2;
+            const centerY = zoomCanvas.height / 2 - 40;
+
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI * 2 / 6) * i + Math.random() * 0.5;
+                const dist = 65 + Math.random() * 45;
+
+                trashList.push({
+                    id: i,
+                    typeIndex: i % 3,
+                    x: centerX + Math.cos(angle) * dist,
+                    y: centerY + Math.sin(angle) * dist,
+                    size: 150,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5,
+                    floatOffset: Math.random() * 100
+                });
+            }
+
+            if (zoomAnimationId) {
+                cancelAnimationFrame(zoomAnimationId);
+                zoomAnimationId = null;
+            }
+            renderZoomGame();
+        }
+
+        function renderZoomGame() {
+            zCtx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+            const centerX = zoomCanvas.width / 2;
+
+            // 미니게임 생물 둥둥 떠있는 효과
+            const creatureFloatY = Math.sin(Date.now() * 0.003) * 8;
+            const centerY = (zoomCanvas.height / 2 - 40) + creatureFloatY;
+
+            // 1. 줌업화면: '더워하는 버전' 이미지 출력
+            const hotImg = targetCreature.imgs.hot;
+            if (hotImg && hotImg.complete && hotImg.naturalWidth !== 0) {
+                const targetW = 250;
+                const aspect = hotImg.naturalHeight / hotImg.naturalWidth;
+                const drawW = targetW;
+                const drawH = targetW * aspect;
+                zCtx.drawImage(hotImg, centerX - drawW / 2, centerY - drawH / 2, drawW, drawH);
+            } else {
+                zCtx.font = "100px 'PixelFont', sans-serif";
+                zCtx.textAlign = "center";
+                zCtx.textBaseline = "middle";
+                zCtx.fillText("🥵", centerX, centerY);
+            }
+
+            // 경계값 설정
+            const padding = 35;
+            const minX = padding;
+            const maxX = zoomCanvas.width - padding;
+            const minY = padding;
+            const maxY = zoomCanvas.height - 140;
+
+            // 2. 쓰레기 이동 & 벽 충돌 판정 & 그리기
+            trashList.forEach(t => {
+                if (!draggedTrash || draggedTrash.id !== t.id) {
+                    t.x += t.vx + Math.sin(Date.now() * 0.003 + t.floatOffset) * 0.4;
+                    t.y += t.vy + Math.cos(Date.now() * 0.003 + t.floatOffset) * 0.4;
+
+                    if (t.x < minX) { t.x = minX; t.vx *= -1; }
+                    if (t.x > maxX) { t.x = maxX; t.vx *= -1; }
+                    if (t.y < minY) { t.y = minY; t.vy *= -1; }
+                    if (t.y > maxY) { t.y = maxY; t.vy *= -1; }
+                }
+
+                const img = trashImgs[t.typeIndex];
+                if (img && img.complete && img.naturalWidth !== 0) {
+                    const aspect = img.naturalHeight / img.naturalWidth;
+                    const drawW = t.size;
+                    const drawH = t.size * aspect;
+                    zCtx.drawImage(img, t.x - drawW / 2, t.y - drawH / 2, drawW, drawH);
+                } else {
+                    zCtx.font = "36px 'PixelFont', sans-serif";
+                    zCtx.fillText("🗑️", t.x, t.y);
+                }
+            });
+
+            if (!document.getElementById('stage1-screen').classList.contains('hidden') && trashList.length > 0) {
+                zoomAnimationId = requestAnimationFrame(renderZoomGame);
+            }
+        }
+
+        function getPos(e) {
+            const rect = zoomCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function onTrashDown(e) {
+            const pos = getPos(e);
+            for (let i = trashList.length - 1; i >= 0; i--) {
+                const t = trashList[i];
+                if (Math.hypot(pos.x - t.x, pos.y - t.y) < 35) {
+                    draggedTrash = t;
+                    dragOffset = { x: pos.x - t.x, y: pos.y - t.y };
+                    break;
+                }
+            }
+        }
+
+        function onTrashMove(e) {
+            if (!draggedTrash) return;
+            const pos = getPos(e);
+            draggedTrash.x = pos.x - dragOffset.x;
+            draggedTrash.y = pos.y - dragOffset.y;
+        }
+
+        function onTrashUp() {
+            if (!draggedTrash) return;
+
+            const bagY = zoomCanvas.height - 120;
+            if (draggedTrash.y > bagY) {
+                trashList = trashList.filter(t => t.id !== draggedTrash.id);
+
+                if (trashList.length === 0) {
+                    showStage2Button();
+                }
+            }
+            draggedTrash = null;
+        }
+
+        zoomCanvas.addEventListener('mousedown', onTrashDown);
+        zoomCanvas.addEventListener('mousemove', onTrashMove);
+        window.addEventListener('mouseup', onTrashUp);
+
+        zoomCanvas.addEventListener('touchstart', onTrashDown);
+        zoomCanvas.addEventListener('touchmove', onTrashMove);
+        window.addEventListener('touchend', onTrashUp);
+
+        // ==========================================
+        // 4. 2단계 스토리 내레이션 & 버튼 처리
+        // ==========================================
+        function showStage2Button() {
+            const narrationBox = document.getElementById('narration-box');
+            const narrationText = document.getElementById('narration-text');
+            const btnSubTxt = document.getElementById('btn-sub-txt');
+
+            narrationText.innerHTML = `쓰레기를 모두 치웠어!<br><br>하지만 <strong>${targetCreature.name}</strong>이(가) 뜨거운 해수온 때문에 더워하고 있어!`;
+            btnSubTxt.innerText = `${targetCreature.name}을(를) 위해`;
+
+            narrationBox.classList.remove('hidden');
+        }
+
+        document.getElementById('btn-goto-stage2').addEventListener('click', () => {
+            document.getElementById('stage1-screen').classList.add('hidden');
+            startTeamBMiniGame(targetCreature);
+        });
+
+        function startTeamBMiniGame(creature) {
+            alert(`[2단계 해류 런 미니게임 씬으로 이동]\n${creature.name}을(를) 위한 미니게임을 시작합니다!`);
+            creature.saved = true;
+        }
+
+        // ==========================================
+        // 5. 메인 탐색 루프
+        // ==========================================
+        function update() {
+            const moveX = joyInput.x * player.speed;
+            const moveY = joyInput.y * player.speed;
+
+            player.x += moveX;
+            player.y += moveY;
+
+            player.x = Math.max(player.size, Math.min(MAP_WIDTH - player.size, player.x));
+            player.y = Math.max(player.size, Math.min(MAP_HEIGHT - player.size, player.y));
+
+            const isMoving = Math.hypot(joyInput.x, joyInput.y) > 0.1;
+
+            if (isMoving) {
+                if (joyInput.x < 0) facingDir = 'left';
+                else if (joyInput.x > 0) facingDir = 'right';
+
+                const rawAngle = Math.atan2(joyInput.y, joyInput.x);
+
+                if (facingDir === 'right') {
+                    moveAngle = rawAngle;
+                } else {
+                    moveAngle = rawAngle - Math.PI;
+                }
+
+                animTimer++;
+                if (animTimer % 10 === 0) {
+                    animFrame = (animFrame + 1) % 2;
+                }
+            } else {
+                animFrame = 0;
+                moveAngle = 0;
+            }
+
+            creatures.forEach(c => {
+                if (!c.saved) {
+                    const dist = Math.hypot(player.x - c.x, player.y - c.y);
+                    if (dist < 40 && document.getElementById('stage1-screen').classList.contains('hidden')) {
+                        targetCreature = c;
+                        initStage1(c);
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cameraX = player.x - canvas.width / 2;
+            const cameraY = player.y - canvas.height / 2;
+
+            ctx.save();
+            ctx.translate(-cameraX, -cameraY);
+
+            // 격자 그리기
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+            ctx.lineWidth = 2;
+            for (let x = 0; x < MAP_WIDTH; x += 100) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, MAP_HEIGHT); ctx.stroke();
+            }
+            for (let y = 0; y < MAP_HEIGHT; y += 100) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(MAP_WIDTH, y); ctx.stroke();
+            }
+
+            // 맵 테두리
+            ctx.strokeStyle = "#00d2ff";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+
+            // 生物 그리기
+            creatures.forEach(c => {
+                const floatY = Math.sin(Date.now() * 0.003 + c.id * 1.5) * 6;
+                const drawY = c.y + floatY;
+
+                if (c.saved) {
+                    const happyImg = c.imgs.happy;
+                    if (happyImg.complete && happyImg.naturalWidth !== 0) {
+                        const targetWidth = 120;
+                        const aspect = happyImg.naturalHeight / happyImg.naturalWidth;
+                        const drawW = targetWidth;
+                        const drawH = targetWidth * aspect;
+                        ctx.drawImage(happyImg, c.x - drawW / 2, drawY - drawH / 2, drawW, drawH);
+                    } else {
+                        ctx.fillText("🐠", c.x, drawY);
+                    }
+
+                    // 구출 성공했을 때만 본래 이름 표시
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "14px 'PixelFont', sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText(c.name, c.x, drawY + 60);
+                } else {
+                    // 갇혀있을 때는 쓰레기 뭉치만 표시 (이름 없음)
+                    if (imgTrashBag.complete && imgTrashBag.naturalWidth !== 0) {
+                        const targetWidth = 120;
+                        const aspect = imgTrashBag.naturalHeight / imgTrashBag.naturalWidth;
+                        const drawW = targetWidth;
+                        const drawH = targetWidth * aspect;
+                        ctx.drawImage(imgTrashBag, c.x - drawW / 2, drawY - drawH / 2, drawW, drawH);
+                    } else {
+                        ctx.fillText("🗑️", c.x, drawY);
+                    }
+                }
+            });
+
+            // 해녀 그리기
+            ctx.save();
+            const playerFloatY = (Math.hypot(joyInput.x, joyInput.y) <= 0.1) ? Math.sin(Date.now() * 0.003) * 4 : 0;
+            ctx.translate(player.x, player.y + playerFloatY);
+            ctx.rotate(moveAngle);
+
+            const currentImg = playerImgs[facingDir][animFrame];
+            const targetWidth = 100;
+
+            if (currentImg.complete && currentImg.naturalWidth !== 0) {
+                const aspectRatio = currentImg.naturalHeight / currentImg.naturalWidth;
+                const drawWidth = targetWidth;
+                const drawHeight = targetWidth * aspectRatio;
+
+                ctx.drawImage(currentImg, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+            } else {
+                ctx.beginPath();
+                ctx.arc(0, 0, player.size, 0, Math.PI * 2);
+                ctx.fillStyle = "#ff7f50";
+                ctx.fill();
+            }
+
+            ctx.restore();
+            ctx.restore();
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // 도감 화면 업데이트
+        function openBook() {
+            const grid = document.getElementById('book-grid');
+            grid.innerHTML = '';
+            creatures.forEach(c => {
+                const div = document.createElement('div');
+                div.style.cssText = "padding:10px; border:2px solid #00d2ff; text-align:center; background:#111;";
+
+                const activeImg = c.saved ? c.imgs.happy : c.imgs.gray;
+
+                div.innerHTML = `
+                    <div style="height:60px; display:flex; justify-content:center; align-items:center;">
+                        <img src="${activeImg.src}" style="max-width:60px; max-height:60px; object-fit:contain; image-rendering:pixelated;">
+                    </div>
+                    <div style="font-size:12px; margin-top:5px; color:${c.saved ? '#00d2ff' : '#888'};">
+                        ${c.saved ? c.name : '미구출'}
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+            document.getElementById('book-ui').classList.remove('hidden');
+        }
+        function closeBook() { document.getElementById('book-ui').classList.add('hidden'); }
+
+        loop();
+    </script>
+</body>
+
+</html>
